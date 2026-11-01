@@ -18,38 +18,31 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
 
-      - name: Build Project Manually
+      - name: Find and Build Project
         run: |
           mkdir -p build Output
           
-          # ค้นหาไฟล์โปรเจกต์ .xcodeproj หรือ .xcworkspace ในเครื่องอัตโนมัติ
-          if ls *.xcworkspace 1> /dev/null 2>&1; then
-            WORKSPACE_FILE=$(ls -d *.xcworkspace | head -n 1)
-            SCHEME_NAME=$(basename "$WORKSPACE_FILE" .xcworkspace)
-            echo "Using Workspace: $WORKSPACE_FILE"
-            
-            xcodebuild -workspace "$WORKSPACE_FILE" \
-                       -scheme "$SCHEME_NAME" \
-                       -configuration Release \
-                       -sdk iphoneos \
-                       -derivedDataPath build/DerivedData \
-                       CODE_SIGNING_ALLOWED=NO \
-                       CODE_SIGNING_REQUIRED=NO
-          else
-            PROJECT_FILE=$(ls -d *.xcodeproj | head -n 1)
-            SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
-            echo "Using Project: $PROJECT_FILE"
-            
-            xcodebuild -project "$PROJECT_FILE" \
-                       -scheme "$SCHEME_NAME" \
-                       -configuration Release \
-                       -sdk iphoneos \
-                       -derivedDataPath build/DerivedData \
-                       CODE_SIGNING_ALLOWED=NO \
-                       CODE_SIGNING_REQUIRED=NO
+          # ค้นหาไฟล์ .xcodeproj จากทุกโฟลเดอร์ย่อยโดยอัตโนมัติ
+          PROJECT_FILE=$(find . -name "*.xcodeproj" -not -path "*/.*" | head -n 1)
+          
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "Error: Could not find any .xcodeproj file in the repository!"
+            exit 1
           fi
+          
+          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
+          echo "Found project: $PROJECT_FILE with scheme: $SCHEME_NAME"
+          
+          # สั่ง Build โปรเจกต์
+          xcodebuild -project "$PROJECT_FILE" \
+                     -scheme "$SCHEME_NAME" \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -derivedDataPath build/DerivedData \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO
 
-          # แพ็กไฟล์ .app ที่คอมไพล์ได้ให้เป็น .ipa
+          # แพ็กไฟล์ .app เป็น .ipa
           mkdir -p build/Payload
           cp -r build/DerivedData/Build/Products/Release-iphoneos/*.app build/Payload/
           cd build && zip -r ../Output/NxNative-Release.ipa Payload

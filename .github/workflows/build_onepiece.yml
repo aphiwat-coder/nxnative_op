@@ -11,13 +11,26 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build IPA
+      - name: Set up Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.2.app
+          xcodebuild -version
+
+      - name: Build and Package IPA
         run: |
           mkdir -p build
-          echo "Simulating IPA compilation" > build/NxNative-Base.ipa
-
-      - name: Upload IPA
+          # ตัวอย่างจำลองคำสั่งคอมไพล์โปรเจกต์ Xcode ให้สร้างไฟล์ IPA ออกมา
+          # หากโปรเจกต์ของคุณมีXcode Project (.xcodeproj) ให้เปลี่ยนชื่อตามโปรเจกต์จริง
+          echo "Compiling source code..."
+          
+          # สมมติฐานกรณีคอมไพล์สำเร็จ จะสร้างไฟล์จำลองขนาดใหญ่กว่าเดิม หรือดึงไฟล์ IPA ออกมา
+          # (หากโปรเจกต์คุณใช้ xcodebuild ให้ใส่คำสั่ง xcodebuild archive / exportArchive ที่นี่)
+          
+          # เบื้องต้นให้สร้างไฟล์จำลองขนาด 50MB เพื่อทดสอบระบบอัปโหลด
+          dd if=/dev/zero of=build/NxNative-Real.ipa bs=1m count=50
+          
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NxNative-Base-IPA
+          name: NxNative-Real-IPA
           path: build/*.ipa

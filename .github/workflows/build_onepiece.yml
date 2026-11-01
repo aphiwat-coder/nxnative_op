@@ -18,31 +18,38 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
 
-      - name: Find and Build Project
+      - name: Locate and Build Xcode Project
         run: |
           mkdir -p build Output
           
-          # ค้นหาไฟล์ .xcodeproj จากทุกโฟลเดอร์ย่อยโดยอัตโนมัติ
-          PROJECT_FILE=$(find . -name "*.xcodeproj" -not -path "*/.*" | head -n 1)
+          # ค้นหาไฟล์ .xcodeproj ทุกซอกทุกมุมในโปรเจกต์
+          PROJECT_PATH=$(find . -name "*.xcodeproj" -not -path "*/.*" | head -n 1)
           
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "Error: Could not find any .xcodeproj file in the repository!"
+          if [ -z "$PROJECT_PATH" ]; then
+            echo "Error: No .xcodeproj found anywhere in the repository."
             exit 1
           fi
           
-          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
-          echo "Found project: $PROJECT_FILE with scheme: $SCHEME_NAME"
+          PROJECT_DIR=$(dirname "$PROJECT_PATH")
+          PROJECT_NAME=$(basename "$PROJECT_PATH")
+          SCHEME_NAME=$(basename "$PROJECT_NAME" .xcodeproj)
           
-          # สั่ง Build โปรเจกต์
-          xcodebuild -project "$PROJECT_FILE" \
+          echo "Found project at: $PROJECT_PATH"
+          echo "Project Dir: $PROJECT_DIR, Scheme: $SCHEME_NAME"
+          
+          cd "$PROJECT_DIR"
+          
+          # สั่ง Build โค้ดโปรเจกต์
+          xcodebuild -project "$PROJECT_NAME" \
                      -scheme "$SCHEME_NAME" \
                      -configuration Release \
                      -sdk iphoneos \
-                     -derivedDataPath build/DerivedData \
+                     -derivedDataPath ../build/DerivedData \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO
 
-          # แพ็กไฟล์ .app เป็น .ipa
+          # แพ็กไฟล์ .app ให้เป็น .ipa
+          cd ..
           mkdir -p build/Payload
           cp -r build/DerivedData/Build/Products/Release-iphoneos/*.app build/Payload/
           cd build && zip -r ../Output/NxNative-Release.ipa Payload

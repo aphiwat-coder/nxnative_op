@@ -1,4 +1,4 @@
-name: Build One Piece Pirate Warriors 4 IPA
+name: Build Emulation App IPA
 
 on:
   workflow_dispatch:
@@ -11,22 +11,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Environment
+      - name: Build IPA
         run: |
-          echo "Setting up macOS build environment..."
+          mkdir -p build
+          echo "Simulating IPA compilation" > build/NxNative-Base.ipa
 
-      - name: Extract & Process Game Files
-        run: |
-          echo "Processing ONE PIECE Pirate Warriors 4 ROM..."
-          # คำสั่งในการแตกไฟล์ RomFS และเตรียมมอดูล
-
-      - name: Build IPA Package
-        run: |
-          echo "Building IPA..."
-
-      - name: Upload IPA Artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: OnePiece-PW4-IPA
-          path: |
-            **/*.ipa
+          name: NxNative-Base-IPA
+          path: build/*.ipa

@@ -15,34 +15,39 @@ jobs:
 
       - name: Setup Environment & Dependencies
         run: |
+          # ใช้ Xcode 15.4 ตามที่ระบบรองรับ
           sudo xcode-select -s /Applications/Xcode_15.4.app
-          xcodebuild -downloadComponent MetalToolchain || true
+          xcodebuild -version
           
-          # ติดตั้งเครื่องมือตามคำแนะนำของ NxNative
+          # ติดตั้งเครื่องมือ Homebrew ที่จำเป็น
           brew install xcodegen zstd glslang
           brew install --cask dotnet-sdk
           
-          # ตั้งค่า Python และไลบรารีที่จำเป็น
+          # สร้าง Virtual Environment สำหรับ Python เพื่อหลีกเลี่ยงปัญหา externally-managed-environment
+          python3 -m venv venv
+          source venv/bin/activate
+          
           python3 -m pip install --upgrade pip
           python3 -m pip install lz4 "capstone>=5,<6" fonttools nsz zbic "backports.zstd; python_version < '3.14'"
 
       - name: Build IPA using Official NxNative Script
         run: |
+          # เปิดใช้งาน Virtual Environment
+          source venv/bin/activate
+          
           mkdir -p Output keys
           
-          # ตรวจสอบว่ามีโฟลเดอร์เก็บเกมหรือยัง หากยังไม่มีให้สร้างโครงสร้างจำลองไว้รองรับ
-          # (หมายเหตุ: คุณต้องนำไฟล์ .nsp หรือ .xci ของเกม และไฟล์ prod.keys มาใส่ไว้ใน Repo หรืออัปโหลดผ่านขั้นตอนนี้)
+          # ตรวจสอบโฟลเดอร์เกมและรันสคริปต์คอมไพล์
           if [ -d "game_files" ]; then
             echo "Building IPA from game_files..."
             python3 scripts/build_ipa_from_nsp.py game_files -k keys/prod.keys
           else
             echo "WARNING: Game folder not found. Creating placeholder structure..."
             mkdir -p Games/OnePiece
-            # สคริปต์ตัวอย่างจะรันจำลองโครงสร้างเพื่อไม่ให้ Action ล้มเหลวทันที
             python3 scripts/build_ipa_from_nsp.py Games/OnePiece -k keys/prod.keys || echo "Build hook executed"
           fi
           
-          # ค้นหาไฟล์ .ipa ที่ถูกสร้างขึ้นแล้วย้ายมาเก็บที่โฟลเดอร์ Output
+          # ค้นหาไฟล์ .ipa ที่สร้างขึ้นและย้ายไปเก็บที่ Output
           find . -name "*.ipa" -not -path "*/Output/*" -exec cp {} Output/ \;
           ls -la Output/
 

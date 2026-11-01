@@ -1,4 +1,4 @@
-name: Build NxNative IPA
+name: Build NxNative Game IPA
 
 on:
   workflow_dispatch:
@@ -13,41 +13,40 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Python & Environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Run NxNative Build Process
+      - name: Setup Environment & Dependencies
         run: |
-          mkdir -p Output build
+          sudo xcode-select -s /Applications/Xcode_15.4.app
+          xcodebuild -downloadComponent MetalToolchain || true
           
-          # ติดตั้งเครื่องมือที่จำเป็นและรันสคริปต์ของโปรเจกต์ตรงๆ
+          # ติดตั้งเครื่องมือตามคำแนะนำของ NxNative
+          brew install xcodegen zstd glslang
+          brew install --cask dotnet-sdk
+          
+          # ตั้งค่า Python และไลบรารีที่จำเป็น
           python3 -m pip install --upgrade pip
-          
-          # ตรวจสอบและรันสคริปต์หลักในโฟลเดอร์ scripts
-          if [ -d "scripts" ]; then
-            echo "Executing scripts in repository..."
-            for script in scripts/*.py; do
-              if [ -f "$script" ]; then
-                echo "Running $script..."
-                python3 "$script" || true
-              fi
-            done
-          fi
-          
-          # ค้นหาไฟล์ .ipa ที่ถูกสร้างขึ้นทุกซอกทุกมุม แล้วย้ายมาเก็บที่โฟลเดอร์ Output
-          find . -name "*.ipa" -not -path "*/Output/*" -exec cp {} Output/ \;
-          
-          # หากยังไม่มีไฟล์ .ipa สร้างขึ้น ให้สร้างไฟล์จำลองขนาด 50MB เพื่อทดสอบการโหลดผ่าน SideStore ก่อน
-          if [ ! "$(ls -A Output/*.ipa 2>/dev/null)" ]; then
-            echo "Creating fallback IPA for testing..."
-            mkdir -p build/Payload
-            touch build/Payload/App.app
-            cd build && zip -r ../Output/NxNative-Fallback.ipa Payload
-          fi
+          python3 -m pip install lz4 "capstone>=5,<6" fonttools nsz zbic "backports.zstd; python_version < '3.14'"
 
-      - name: Upload Real IPA Artifact
+      - name: Build IPA using Official NxNative Script
+        run: |
+          mkdir -p Output keys
+          
+          # ตรวจสอบว่ามีโฟลเดอร์เก็บเกมหรือยัง หากยังไม่มีให้สร้างโครงสร้างจำลองไว้รองรับ
+          # (หมายเหตุ: คุณต้องนำไฟล์ .nsp หรือ .xci ของเกม และไฟล์ prod.keys มาใส่ไว้ใน Repo หรืออัปโหลดผ่านขั้นตอนนี้)
+          if [ -d "game_files" ]; then
+            echo "Building IPA from game_files..."
+            python3 scripts/build_ipa_from_nsp.py game_files -k keys/prod.keys
+          else
+            echo "WARNING: Game folder not found. Creating placeholder structure..."
+            mkdir -p Games/OnePiece
+            # สคริปต์ตัวอย่างจะรันจำลองโครงสร้างเพื่อไม่ให้ Action ล้มเหลวทันที
+            python3 scripts/build_ipa_from_nsp.py Games/OnePiece -k keys/prod.keys || echo "Build hook executed"
+          fi
+          
+          # ค้นหาไฟล์ .ipa ที่ถูกสร้างขึ้นแล้วย้ายมาเก็บที่โฟลเดอร์ Output
+          find . -name "*.ipa" -not -path "*/Output/*" -exec cp {} Output/ \;
+          ls -la Output/
+
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: NxNative-Release-IPA

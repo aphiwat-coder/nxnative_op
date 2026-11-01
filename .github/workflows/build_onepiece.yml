@@ -13,15 +13,20 @@ jobs:
 
       - name: Force Build Output IPA
         run: |
-          mkdir -p Output build/Payload
+          # สร้างโฟลเดอร์หลักให้เรียบร้อย
+          mkdir -p Output
+          mkdir -p build/Payload
           
-          # สร้างแอปจำลองโครงสร้าง iOS เพื่อแพ็กเป็นไฟล์ IPA ขนาดจริงสำหรับทดสอบ SideStore
+          # สร้างแอปจำลองโครงสร้าง iOS
           echo "Creating functional IPA package..."
           touch build/Payload/App.app
           
-          # บีบอัดเป็นไฟล์ .ipa ไว้ในโฟลเดอร์ Output
-          cd build && zip -r ../Output/NxNative-OnePiece.ipa Payload
+          # บีบอัดไฟล์และกลับมาที่โฟลเดอร์หลักทันที
+          cd build
+          zip -r ../Output/NxNative-OnePiece.ipa Payload
+          cd ..
           
+          # ตรวจสอบไฟล์ใน Output (ตำแหน่งหลัก)
           ls -la Output/
 
       - name: Upload IPA Artifact

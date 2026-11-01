@@ -18,25 +18,28 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
 
-      - name: Install Dependencies
-        run: |
-          brew install cmake ninja pkg-config
-
       - name: Build NxNative Project & Export IPA
         run: |
           mkdir -p build Output
-          # สั่งให้ xcodebuild คอมไพล์โปรเจกต์ NxNative ออกมาเป็นแอป iOS
-          xcodebuild -workspace NxNative.xcworkspace \
-                     -scheme NxNative \
+          
+          # ค้นหาไฟล์โปรเจกต์ .xcodeproj อัตโนมัติ
+          PROJECT_FILE=$(find . -name "*.xcodeproj" -maxdepth 2 | head -n 1)
+          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
+          
+          echo "Found project: $PROJECT_FILE with scheme: $SCHEME_NAME"
+          
+          # สั่ง Build โค้ดโปรเจกต์จริง
+          xcodebuild -project "$PROJECT_FILE" \
+                     -scheme "$SCHEME_NAME" \
                      -configuration Release \
                      -sdk iphoneos \
                      -derivedDataPath build/DerivedData \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO
 
-          # จัดโครงสร้างไฟล์โฟลเดอร์ Payload เพื่อแพ็กเป็นไฟล์ .ipa
+          # แพ็กไฟล์ .app เป็น .ipa
           mkdir -p build/Payload
-          cp -r build/DerivedData/Build/Products/Release-iphoneos/NxNative.app build/Payload/
+          cp -r build/DerivedData/Build/Products/Release-iphoneos/*.app build/Payload/
           cd build && zip -r ../Output/NxNative-Release.ipa Payload
 
       - name: Upload Real IPA Artifact

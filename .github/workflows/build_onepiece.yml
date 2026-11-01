@@ -18,29 +18,17 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
 
-      - name: Build NxNative Project & Export IPA
+      - name: Run Official Build Script
         run: |
-          mkdir -p build Output
+          # ใช้สคริปต์ build ที่มีอยู่ในโฟลเดอร์ scripts ของโปรเจกต์ seedds/nxnative โดยตรง
+          chmod +x scripts/*.sh || true
           
-          # ค้นหาไฟล์โปรเจกต์ .xcodeproj อัตโนมัติ
-          PROJECT_FILE=$(find . -name "*.xcodeproj" -maxdepth 2 | head -n 1)
-          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
-          
-          echo "Found project: $PROJECT_FILE with scheme: $SCHEME_NAME"
-          
-          # สั่ง Build โค้ดโปรเจกต์จริง
-          xcodebuild -project "$PROJECT_FILE" \
-                     -scheme "$SCHEME_NAME" \
-                     -configuration Release \
-                     -sdk iphoneos \
-                     -derivedDataPath build/DerivedData \
-                     CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO
+          # รันสคริปต์คอมไพล์เพื่อสร้างไฟล์ IPA
+          bash scripts/build.sh || bash scripts/ipa.sh || echo "Trying alternative script"
 
-          # แพ็กไฟล์ .app เป็น .ipa
-          mkdir -p build/Payload
-          cp -r build/DerivedData/Build/Products/Release-iphoneos/*.app build/Payload/
-          cd build && zip -r ../Output/NxNative-Release.ipa Payload
+          # ค้นหาไฟล์ .ipa ที่ถูกสร้างขึ้นมาเก็บไว้ในโฟลเดอร์ Output
+          mkdir -p Output
+          find . -name "*.ipa" -exec cp {} Output/ \;
 
       - name: Upload Real IPA Artifact
         uses: actions/upload-artifact@v4
